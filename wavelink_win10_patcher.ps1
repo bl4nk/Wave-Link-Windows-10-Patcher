@@ -90,7 +90,7 @@ function Main {
 			Exit
 		}
 		
-		Write-Host "Patching the AppManifest.xml..."
+		Write-Host "Patching the AppxManifest.xml..."
 		
 		# Replace the minimum required version
 		$xml = [System.IO.File]::ReadAllText($appmanifest, [System.Text.Encoding]::UTF8)
@@ -189,7 +189,6 @@ function Find-WinSDKFolder {
         return $newest.DirectoryName
     }
 
-	Write-Host "`n[ERROR] Windows SDK not found!" -ForegroundColor Red
     return $null
 }
 
