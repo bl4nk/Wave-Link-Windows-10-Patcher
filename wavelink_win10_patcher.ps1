@@ -119,10 +119,8 @@ function Main {
 		Write-Host "Installing the patched files..."
 		Add-AppxPackage -Path "$patchedInstaller" -ErrorAction Stop
 		
-		# Remove the temporary folder
+		# Remove the temporary files
 		Write-Host "Removing the temporary files..."
-		
-		#Re-enable these after testing
 		Remove-Item -Path $tempDir -Recurse -Force
 		Remove-Item -Path $patchedInstaller -Force
 		Remove-Item -Path $certFile -Force
