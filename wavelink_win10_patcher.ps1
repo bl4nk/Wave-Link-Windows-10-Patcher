@@ -1,30 +1,30 @@
 <#
 .SYNOPSIS
-    Patches and installs the Elgato Wave Link v3 installer on Windows 10 systems.
+	Patches and installs the Elgato Wave Link v3 installer on Windows 10 systems.
 .DESCRIPTION
-    This script extracts the Wave Link installer, modifies the AppxManifest.xml, 
+	This script extracts the Wave Link installer, modifies the AppxManifest.xml, 
 	repacks the installer, generates a custom self-signed certificate, installs 
 	the patched file, and deletes temporary files.
 .PARAMETER FilePath
-    The path to the target Wave Link .msix installer file.
+	The path to the target Wave Link .msix installer file.
 .EXAMPLE
-    .\patcher_new.ps1 "C:\Users\bl4nk\Desktop\Elgato.WaveLink_3.3.0.4529_x64.msix"
+	.\patcher_new.ps1 "C:\Users\bl4nk\Desktop\Elgato.WaveLink_3.3.0.4529_x64.msix"
 .NOTES
-    This script must be ran as an Administrator in order to work properly.
+	This script must be ran as an Administrator in order to work properly.
 #>
 
 # Define script usage params
 param (
-    [string]$FilePath
+	[string]$FilePath
 )
 
 function Main {
 	# Define the first param as a string
-    param([string]$Path)
+	param([string]$Path)
 	
 	# Save user's error preference and set the script to stop on error (preference restored at end/fail)
 	$OldErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = 'Stop'
+	$ErrorActionPreference = 'Stop'
 
 	try {
 		# Verify a param is given
@@ -154,8 +154,8 @@ function Main {
 		
 		Write-Host "`nInstallation complete!" -ForegroundColor Green
 	} catch {
-        Write-Host "`n[FATAL ERROR] Script execution halted: `n$_" -ForegroundColor Red
-        Exit
+		Write-Host "`n[FATAL ERROR] Script execution halted: `n$_" -ForegroundColor Red
+		Exit
 	} finally {
 		# Restore the user's old error preference
 		$ErrorActionPreference = $OldErrorAction
@@ -165,43 +165,43 @@ function Main {
 function Show-Usage {
 	$ScriptName = $MyInvocation.MyCommand.Name
 	
-    Write-Host "Usage:"
-    Write-Host '  .\$ScriptName "<path_to_file>"' -ForegroundColor Yellow
-    Write-Host "Example:"
-    Write-Host '  .\$ScriptName "C:\Elgato.WaveLink_3.3.0.4529_x64.msix"' -ForegroundColor Cyan
+	Write-Host "Usage:"
+	Write-Host '  .\$ScriptName "<path_to_file>"' -ForegroundColor Yellow
+	Write-Host "Example:"
+	Write-Host '  .\$ScriptName "C:\Elgato.WaveLink_3.3.0.4529_x64.msix"' -ForegroundColor Cyan
 }
 
 function Find-WinSDKFolder {
-    $rawArch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
-    $arch = switch ($rawArch.ToLower()) {
-        "amd64"   { "x64" }
-        "arm64"   { "arm64" }
-        "x86"     { "x86" }
-        default   { $null }
-    }
+	$rawArch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
+	$arch = switch ($rawArch.ToLower()) {
+		"amd64"	  { "x64" }
+		"arm64"	  { "arm64" }
+		"x86"	  { "x86" }
+		default	  { $null }
+	}
 	
 	if (-not $arch) {
 		Write-Host "ERROR: Could not detect hardware architecture" -ForegroundColor Red
 		Exit
 	}
 
-    $roots = @("C:\Program Files (x86)\Windows Kits\10\bin", "C:\Program Files\Windows Kits\10\bin")
-    $foundFiles = foreach ($r in $roots) {
-        if (Test-Path $r) {
-            Get-ChildItem $r -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue | 
-                Where-Object { $_.DirectoryName -like "*\$arch" }
-        }
-    }
+	$roots = @("C:\Program Files (x86)\Windows Kits\10\bin", "C:\Program Files\Windows Kits\10\bin")
+	$foundFiles = foreach ($r in $roots) {
+		if (Test-Path $r) {
+			Get-ChildItem $r -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue | 
+				Where-Object { $_.DirectoryName -like "*\$arch" }
+		}
+	}
 
-    if ($foundFiles) {
-        $newest = $foundFiles | Sort-Object { 
-            [version]($_.Directory.Parent.Name) 
-        } -Descending | Select-Object -First 1
+	if ($foundFiles) {
+		$newest = $foundFiles | Sort-Object { 
+			[version]($_.Directory.Parent.Name) 
+		} -Descending | Select-Object -First 1
 
-        return $newest.DirectoryName
-    }
+		return $newest.DirectoryName
+	}
 
-    return $null
+	return $null
 }
 
 function DownloadSDK-Message {	
