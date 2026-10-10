@@ -7,7 +7,7 @@ An automated PowerShell script to patch and install the Elgato Wave Link MSIX pa
 Before running the patcher, ensure you have the following:
 
 1. **Wave Link Installer**: Download the latest official package from the [Elgato Downloads Page](https://www.elgato.com/us/en/s/downloads).
-2. **Windows SDK**: The script requires deployment tools packaged inside the Windows SDK. 
+2. **Windows SDK**: The script requires tools contained inside the Windows SDK. 
 
 ### Verifying Windows SDK Installation
 Check if you already have the SDK by looking for version-labeled folders in either of these directories:
@@ -28,9 +28,9 @@ Check if you already have the SDK by looking for version-labeled folders in eith
 .\wavelink_win10_patcher.ps1 "C:\Users\bl4nk\Desktop\Elgato.WaveLink_3.3.0.4529_x64.msix"
 ```
 
-The script will automatically patch the installer, install the program, and delete the temporary upon completion.
+The script will automatically patch the installer, install the program, and delete the temporary files upon completion.
 
-> **NOTE:** If you wish to retain the patched installer or temporary files afterwards, delete/comment out the _Remove-Item_ lines in the script.
+> **NOTE:** If you wish to retain the patched installer or temporary files afterwards, delete/comment out the *Remove-Item* lines in the script.
 
 ---
 
