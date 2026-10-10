@@ -42,7 +42,19 @@ function Main {
 		
 		# Make sure this is ran as an administrator
 		if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-			Write-Host "`n[ERROR] This script must be run as an Administrator to import the certificate into the LocalMachine store." -ForegroundColor Red
+			# Print the error message and await user input
+			Write-Host "[ERROR] PowerShell needs to be run as an Administrator. Please accept the UAC prompt." -ForegroundColor Red
+			Write-Host "Press any key to continue and open the administrator prompt..." -ForegroundColor Cyan
+			$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+			
+			# Pop up the UAC prompt and make sure they accepted
+			try {
+				Start-Process -FilePath "powershell.exe" -ArgumentList "-NoExit -NoProfile -ExecutionPolicy Bypass -Command ""& '$PSCommandPath' '$Path'""" -Verb RunAs
+			} catch {
+				Write-Host "`n[ERROR] You chose NO on the prompt. The script cannot run without Administrator priveleges." -ForegroundColor Red
+			}
+			
+			# A new admin powershell is either ran or not -- exit out
 			Exit
 		}
 		
