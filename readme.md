@@ -52,3 +52,11 @@ Once executed, re-run the patcher script normally.
 ## Credits & Motivation
 
 This script was inspired by [DRDRDRRDDRDR](https://github.com/DRDRDRRDDRDR). He made a whole program to handle everything, but I created this because I was having problems with his implementation, and I was looking for a simple script-based solution rather than a full application to handle the patch/installation process.
+
+
+---
+
+## Screenshots
+<img width="942" height="408" alt="image" src="https://github.com/user-attachments/assets/1373ba4f-65c9-41ca-9b1b-89bc6f3c8b53" />
+
+<img width="1291" height="831" alt="image" src="https://github.com/user-attachments/assets/74926d82-8adf-4535-b6f1-9df11e71df4f" />
