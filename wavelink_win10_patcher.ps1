@@ -145,6 +145,18 @@ function Main {
 		# Install the patched msix file
 		Write-Host "Installing the patched files..."
 		Add-AppxPackage -Path "$patchedInstaller" -ErrorAction Stop
+        
+        Write-Host "Removing the generated/imported certs..."
+        
+        # Remove the certificate from the personal CurrentUser store where it was generated
+        if (Test-Path "Cert:\CurrentUser\My\$($cert.Thumbprint)") {
+            Remove-Item -Path "Cert:\CurrentUser\My\$($cert.Thumbprint)" -Force
+        }
+        
+        # Remove the certificate from the trusted LocalMachine store where it was imported
+        if ($cert.Thumbprint) {
+            & certutil.exe -delstore Root $($cert.Thumbprint) | Out-Null
+        }
 		
 		# Remove the temporary files
 		Write-Host "Removing the temporary files..."
