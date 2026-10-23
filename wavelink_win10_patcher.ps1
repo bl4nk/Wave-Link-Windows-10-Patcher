@@ -165,7 +165,7 @@ function Main {
 
 		# Sign the installer with the new cert
 		Write-Host "Signing the patched installer with our new cert.."
-		& $signtool sign /fd SHA256 /a /f "$certPfx" /p $passwordStr "$patchedInstaller" | Out-Null
+		& $signtool sign /fd SHA256 /f "$certPfx" /p $passwordStr "$patchedInstaller" | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Failed to sign the patched installer" -ForegroundColor Red
