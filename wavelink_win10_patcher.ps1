@@ -140,23 +140,28 @@ function Main {
 		# Create a self-signed certificate
 		$cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WaveLinkPatched" -KeyUsage DigitalSignature -FriendlyName "WaveLinkPatched" -CertStoreLocation "Cert:\CurrentUser\My"
 
-		# Export the cert
-		$certFile = Join-Path $tempdir "WaveLinkPatchCert.cer"
-		Write-Host "Creating self-signed certificate: $certFile" -ForegroundColor Yellow
-		Export-PfxCertificate -Cert $cert -FilePath $certFile | Out-Null
+        $certPfx = Join-Path $tempDir "WaveLinkPatchedCert.pfx"
+        $certCer = Join-Path $tempDir "WaveLinkPatchedCert.cer"
+
+		# Export the certs
+        Write-Host "Creating signing certificate: $certPfx" -ForegroundColor Yellow
+        Export-PfxCertificate -Cert $cert -FilePath $certPfx -Password $passwordSec | Out-Null
+        
+		Write-Host "Creating public certificate: $certCer" -ForegroundColor Yellow
+		Export-Certificate -Cert $cert -FilePath $certCer | Out-Null
 
 		# Sign the installer with the new cert
 		Write-Host "Signing the patched installer with our new cert.."
-		& $signtool sign /fd SHA256 /a /f "$certFile" /p $passwordStr "$patchedInstaller" | Out-Null
+		& $signtool sign /fd SHA256 /a /f "$certPfx" /p $passwordStr "$patchedInstaller" | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Failed to sign the patched installer" -ForegroundColor Red
             return
         }
 
-		# Import the cert into the Local Machine store
-		Write-Host "Importing the cert into your Local Machine store..."
-		Import-Certificate -FilePath "$certFile" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
+		# Import the cert into the trusted store
+		Write-Host "Importing the cert into TrustedPeople..."
+		Import-Certificate -FilePath "$certCer" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
         
         # Check for dependencies
         $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
@@ -215,12 +220,18 @@ function Main {
 		Write-Host "Installing the patched files..."
 		Add-AppxPackage -Path "$patchedInstaller" -ForceApplicationShutdown -ErrorAction Stop
         
-        Write-Host "Removing the generated/imported certs..."
+        Write-Host "Removing the imported certs..."
         
-        # Remove the public certificate
-        $certPath = "Cert:\LocalMachine\TrustedPeople\$($cert.Thumbprint)"
+        # Remove the public certificate from trusted store
+        $certPath = "Cert:\CurrentUser\My\$($cert.Thumbprint)"
         if (Test-Path $certPath) {
             Remove-Item -Path $certPath -Force
+        }
+
+        # Remove the trusted public certificate
+        $trustedCert = "Cert:\LocalMachine\TrustedPeople\$($cert.Thumbprint)"
+        if (Test-Path $trustedCert) {
+            Remove-Item -Path $trustedCert -Force
         }
 		
 		# Remove the temporary files
