@@ -289,7 +289,10 @@ function Find-WinSDKFolder {
 	$foundFiles = foreach ($r in $roots) {
 		if (Test-Path $r) {
 			Get-ChildItem $r -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue | 
-				Where-Object { $_.DirectoryName -like "*\$arch" }
+				Where-Object {
+                    $_.DirectoryName -like "*\$arch" -and
+                    (Test-Path (Join-Path $_.DirectoryName "signtool.exe"))
+                }
 		}
 	}
 
