@@ -138,12 +138,12 @@ function Main {
 		$passwordSec = ConvertTo-SecureString $passwordStr -AsPlainText -Force
 
 		# Create a self-signed certificate
-		$cert = New-SelfSignedCertificate -Type Custom -Subject "CN=WaveLinkPatched" -KeyUsage DigitalSignature -FriendlyName "WaveLinkPatched" -CertStoreLocation "Cert:\CurrentUser\My"
+		$cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=WaveLinkPatched" -KeyUsage DigitalSignature -FriendlyName "WaveLinkPatched" -CertStoreLocation "Cert:\CurrentUser\My"
 
 		# Export the cert
-		$certFile = Join-Path $tempdir "WaveLinkPatchCert.pfx"
+		$certFile = Join-Path $tempdir "WaveLinkPatchCert.cer"
 		Write-Host "Creating self-signed certificate: $certFile" -ForegroundColor Yellow
-		Export-PfxCertificate -Cert $cert -FilePath $certFile -Password $passwordSec | Out-Null
+		Export-PfxCertificate -Cert $cert -FilePath $certFile | Out-Null
 
 		# Sign the installer with the new cert
 		Write-Host "Signing the patched installer with our new cert.."
@@ -156,7 +156,7 @@ function Main {
 
 		# Import the cert into the Local Machine store
 		Write-Host "Importing the cert into your Local Machine store..."
-		Import-PfxCertificate -FilePath "$certFile" -CertStoreLocation "Cert:\LocalMachine\Root" -Password $passwordSec | Out-Null
+		Import-Certificate -FilePath "$certFile" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
         
         # Check for dependencies
         $vclibPackages = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue
@@ -222,14 +222,10 @@ function Main {
         
         Write-Host "Removing the generated/imported certs..."
         
-        # Remove the certificate from the personal CurrentUser store where it was generated
-        if (Test-Path "Cert:\CurrentUser\My\$($cert.Thumbprint)") {
-            Remove-Item -Path "Cert:\CurrentUser\My\$($cert.Thumbprint)" -Force
-        }
-        
-        # Remove the certificate from the trusted LocalMachine store where it was imported
-        if ($cert.Thumbprint) {
-            & certutil.exe -delstore Root $($cert.Thumbprint) | Out-Null
+        # Remove the public certificate
+        $certPath = "Cert:\LocalMachine\TrustedPeople\$($cert.Thumbprint)"
+        if (Test-Path $certPath) {
+            Remove-Item -Path $certPath -Force
         }
 		
 		# Remove the temporary files
