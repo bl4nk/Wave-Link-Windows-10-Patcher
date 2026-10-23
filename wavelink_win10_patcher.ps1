@@ -51,7 +51,7 @@ function Main {
 			try {
 				Start-Process -FilePath "powershell.exe" -ArgumentList "-NoExit -NoProfile -ExecutionPolicy Bypass -Command ""& '$PSCommandPath' '$Path'""" -Verb RunAs
 			} catch {
-				Write-Host "`n[ERROR] You chose NO on the prompt. The script cannot run without Administrator priveleges." -ForegroundColor Red
+				Write-Host "`n[ERROR] You chose NO on the prompt. The script cannot run without Administrator privileges." -ForegroundColor Red
 			}
 			
 			# A new admin powershell is either ran or not -- exit out
