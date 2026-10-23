@@ -117,9 +117,21 @@ function Main {
 		# Replace the minimum required version
 		$xml = [System.IO.File]::ReadAllText($appmanifest, [System.Text.Encoding]::UTF8)
 		$xml = $xml.Replace('MinVersion="10.0.22000.0"', 'MinVersion="10.0.19041.0"')
+        
+        # Verify it was patched
+        if ($xml -notmatch 'MinVersion="10\.0\.19041\.0"') {
+            Write-Host "Failed to patch the minimum Windows version" -ForegroundColor Red
+            return
+        }
 
-		# Replace the publisher (used later on with the self-signed cert)
+		# Replace the publisher
 		$xml = [regex]::Replace($xml, '(<Identity\b[^>]*?\bPublisher=")[^"]*(")', '${1}CN=WaveLinkPatched${2}')
+        
+        # Verify it was patched
+        if ($xml -notmatch '<Identity\b[^>]*\bPublisher="CN=WaveLinkPatched"') {
+            Write-Host "Failed to patch the publisher" -ForegroundColor Red
+            return
+        }
 		
 		# Save the modified AppxManifest.xml
 		[System.IO.File]::WriteAllText($appmanifest, $xml, [System.Text.Encoding]::UTF8)
