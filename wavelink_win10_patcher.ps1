@@ -30,14 +30,14 @@ function Main {
 		# Verify a param is given
 		if ([string]::IsNullOrWhiteSpace($Path)) {
 			Show-Usage
-			Exit
+            return
 		}
 
 		# Make sure the file exists
 		if (-not (Test-Path $Path -PathType Leaf)) {
 			Write-Host "`n[ERROR] The file '$Path' does not exist or is invalid." -ForegroundColor Red
 			Show-Usage
-			Exit
+            return
 		}
 		
 		# Make sure this is ran as an administrator
@@ -55,7 +55,7 @@ function Main {
 			}
 			
 			# A new admin powershell is either ran or not -- exit out
-			Exit
+			return
 		}
 		
 		# Get the newest available Windows SDK folder
@@ -64,7 +64,7 @@ function Main {
 		if (-not $winsdk) {
 			Write-Host "`n[ERROR] Windows SDK not found!" -ForegroundColor Red
 			DownloadSDK-Message
-			Exit
+            return
 		}
 
 		Write-Host "Found Windows SDK folder: $winsdk" -ForegroundColor Yellow
@@ -74,7 +74,7 @@ function Main {
 		if (-not (Test-Path $makeappx)) {
 			Write-Host "`n[ERROR] makeappx.exe not found, reinstall your Windows SDK" -ForegroundColor Red
 			DownloadSDK-Message
-			Exit
+            return
 		}
 		
 		# Check for signtool.exe
@@ -82,7 +82,7 @@ function Main {
 		if (-not (Test-Path $signtool)) {
 			Write-Host "`n[ERROR] signtool.exe not found, reinstall your Windows SDK" -ForegroundColor Red
 			DownloadSDK-Message
-			Exit
+            return
 		}
 		
 		# Create a temporary folder
@@ -103,7 +103,7 @@ function Main {
 		$appmanifest = Join-Path $msixDir "AppxManifest.xml"
 		if (-not (Test-Path $appmanifest)) {
 			Write-Host "`n[ERROR] AppxManifest.xml not found after unpack" -ForegroundColor Red
-			Exit
+            return
 		}
 		
 		Write-Host "Patching the AppxManifest.xml..."
@@ -171,7 +171,7 @@ function Main {
             $vcLibsPath = Join-Path $vcLibFolder "x64\Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx"
             if (-not (Test-Path $vcLibsPath)) {
                 Write-Host "Required VCLibs package not found in download" -ForegroundColor Red
-                Exit
+                return
             }
             
             # Close down problem programs
@@ -182,7 +182,7 @@ function Main {
                 Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
             } catch {
                 Write-Host "Failed to install Microsoft VCLibs: $_" -ForegroundColor Red
-                Exit
+                return
             }
         }
             
@@ -212,7 +212,6 @@ function Main {
 		Write-Host "`nInstallation complete!" -ForegroundColor Green
 	} catch {
 		Write-Host "`n[FATAL ERROR] Script execution halted: `n$_" -ForegroundColor Red
-		Exit
 	} finally {
 		# Restore the user's old error preference
 		$ErrorActionPreference = $OldErrorAction
