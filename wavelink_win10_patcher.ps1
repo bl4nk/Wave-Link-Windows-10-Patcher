@@ -142,7 +142,47 @@ function Main {
 		# Import the cert into the Local Machine store
 		Write-Host "Importing the cert into your Local Machine store..."
 		Import-PfxCertificate -FilePath "$certFile" -CertStoreLocation "Cert:\LocalMachine\Root" -Password $passwordSec | Out-Null
-
+        
+        # Check for dependencies
+        $vclibPackages = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue
+        $vclibPackage = $vclibPackages | Where-Object {
+            $_.Version -ge [version]"14.0.33728.0" -and
+            $_.Architecture.ToString() -eq "X64"
+        } | Select-Object -First 1
+        
+        if ($vclibPackage) {
+            Write-Host "Detected Microsoft VCLibs $($vclibPackage.Version) ($($vclibPackage.Architecture))..." -ForegroundColor Yellow
+        } else {
+            Write-Host "Microsoft VCLibs 14.0.33728.0 (X64) or newer is required." -ForegroundColor Red
+            Write-Host "Downloading and installing Microsoft VCLibs..."
+            
+            # Download VCLib files
+            $vcLibZip = "$tempDir\VCLibs.zip"
+            $downloadUrl = "https://github.com/microsoft/winget-cli/releases/download/v1.9.25180/DesktopAppInstaller_Dependencies.zip"
+            
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $vcLibZip -ErrorAction Stop
+            
+            # Extract VCLib files into a new folder
+            $vcLibFolder = Join-Path $tempDir "vcLib"
+            New-Item -ItemType Directory -Path $vcLibFolder -Force | Out-Null
+            Expand-Archive -Path $vcLibZip -DestinationPath $vcLibFolder -Force
+            
+            # Get VCLibs package path
+            $vcLibsPath = Join-Path $vcLibFolder "x64\Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx"
+            if (-not (Test-Path $vcLibsPath)) {
+                Write-Host "Required VCLibs package not found in download" -ForegroundColor Red
+                Exit
+            }
+            
+            # Install VCLib
+            try {
+                Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
+            } catch {
+                Write-Host "Failed to install Microsoft VCLibs: $_" -ForegroundColor Red
+                Exit
+            }
+        }
+        
 		# Install the patched msix file
 		Write-Host "Installing the patched files..."
 		Add-AppxPackage -Path "$patchedInstaller" -ErrorAction Stop
