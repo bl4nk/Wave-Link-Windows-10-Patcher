@@ -190,7 +190,7 @@ function Main {
             Write-Host "Downloading and installing Microsoft VCLibs..."
             
             # Download VCLib files
-            $vcLibZip = "$tempDir\VCLibs.zip"
+            $vcLibZip = Join-Path $tempDir "VCLibs.zip"
             $downloadUrl = "https://github.com/microsoft/winget-cli/releases/download/v1.9.25180/DesktopAppInstaller_Dependencies.zip"
             
             Invoke-WebRequest -Uri $downloadUrl -OutFile $vcLibZip -ErrorAction Stop
