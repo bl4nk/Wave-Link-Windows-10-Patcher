@@ -269,10 +269,11 @@ function DownloadSDK-Message {
 function CloseProblemPrograms {
     $problemProgs = @("AppInstaller", "WinStore.App")
     foreach ($process in $problemProgs) {
-        if (Get-Process -Name $process -ErrorAction SilentlyContinue) {
+        $running = Get-Process -Name $process -ErrorAction SilentlyContinue
+        if ($running) {
                 Write-Host "Closing $process..."
-                Stop-Process -Name $process -Force -ErrorAction SilentlyContinue
-                Wait-Process -Timeout 5 -ErrorAction SilentlyContinue
+                $running | Stop-Process -Force -ErrorAction SilentlyContinue
+                $running | Wait-Process -Timeout 5 -ErrorAction SilentlyContinue
         }
     }
 }
