@@ -267,7 +267,7 @@ function Find-WinSDKFolder {
 	
 	if (-not $arch) {
 		Write-Host "ERROR: Could not detect hardware architecture" -ForegroundColor Red
-		Exit
+		return $null
 	}
 
 	$roots = @("C:\Program Files (x86)\Windows Kits\10\bin", "C:\Program Files\Windows Kits\10\bin")
