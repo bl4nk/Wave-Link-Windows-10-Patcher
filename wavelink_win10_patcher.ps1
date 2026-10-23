@@ -220,7 +220,7 @@ function Main {
 }
 
 function Show-Usage {
-	$ScriptName = $MyInvocation.MyCommand.Name
+	$ScriptName = Split-Path -Leaf $PSCommandPath
 	
 	Write-Host "Usage:"
 	Write-Host "  .\$ScriptName `"<path_to_file>`"" -ForegroundColor Yellow
