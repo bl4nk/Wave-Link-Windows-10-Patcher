@@ -50,7 +50,10 @@ function Main {
 			
 			# Pop up the UAC prompt and make sure they accepted
 			try {
-				Start-Process -FilePath "powershell.exe" -ArgumentList "-NoExit -NoProfile -ExecutionPolicy Bypass -Command ""& '$PSCommandPath' '$Path'""" -Verb RunAs
+                $escScriptPath = $PSCommandPath.Replace("'", "''")
+                $escInstallPath = $Path.Replace("'", "''")
+                
+				Start-Process -FilePath "powershell.exe" -ArgumentList "-NoExit -NoProfile -ExecutionPolicy Bypass -Command ""& '$escScriptPath' '$escInstallPath'""" -Verb RunAs
 			} catch {
 				Write-Host "`n[ERROR] You chose NO on the prompt. The script cannot run without Administrator privileges." -ForegroundColor Red
 			}
