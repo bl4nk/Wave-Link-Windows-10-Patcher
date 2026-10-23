@@ -302,6 +302,10 @@ function CloseProblemPrograms {
                 Write-Host "Closing $process..."
                 $running | Stop-Process -Force -ErrorAction SilentlyContinue
                 $running | Wait-Process -Timeout 5 -ErrorAction SilentlyContinue
+
+                if (Get-Process -Name $process -ErrorAction SilentlyContinue) {
+                    Write-Host "[WARNING] $process is still running." -ForegroundColor Yellow
+                }
         }
     }
 }
