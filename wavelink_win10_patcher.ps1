@@ -109,10 +109,7 @@ function Main {
 		$xml = $xml.Replace('MinVersion="10.0.22000.0"', 'MinVersion="10.0.19041.0"')
 
 		# Replace the publisher (used later on with the self-signed cert)
-		$xml = [regex]::Replace($xml, '(?s)(]*?Publisher=")[^"]*(")', {
-			param($m)
-			return $m.Groups[1].Value + "CN=WaveLinkPatched" + $m.Groups[2].Value
-		})
+		$xml = [regex]::Replace($xml, '(<Identity\b[^>]*?\bPublisher=")[^"]*(")', '${1}CN=WaveLinkPatched${2}')
 		
 		# Save the modified AppxManifest.xml
 		[System.IO.File]::WriteAllText($appmanifest, $xml, [System.Text.Encoding]::UTF8)
