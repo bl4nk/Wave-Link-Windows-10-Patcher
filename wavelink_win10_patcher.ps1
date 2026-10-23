@@ -159,11 +159,11 @@ function Main {
 		Import-Certificate -FilePath "$certFile" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
         
         # Check for dependencies
-        $vclibPackages = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue
-        $vclibPackage = $vclibPackages | Where-Object {
-            $_.Version -ge [version]"14.0.33728.0" -and
-            $_.Architecture.ToString() -eq "X64"
-        } | Select-Object -First 1
+        $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Version -ge [version]"14.0.33728.0" -and
+                $_.Architecture.ToString() -eq "X64"
+            } | Select-Object -First 1
         
         if ($vclibPackage) {
             Write-Host "Detected Microsoft VCLibs $($vclibPackage.Version) ($($vclibPackage.Architecture))..." -ForegroundColor Yellow
@@ -193,22 +193,17 @@ function Main {
             CloseProblemPrograms
             
             # Install VCLib
-            try {
-                Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
+            Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
+            
+            # Verify installation
+            $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Version -ge [version]"14.0.33728.0" -and
+                    $_.Architecture.ToString() -eq "X64"
+                } | Select-Object -First 1
                 
-                # Verify installation
-                $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" |
-                    Where-Object {
-                        $_.Version -ge [version]"14.0.33728.0" -and
-                        $_.Architecture.ToString() -eq "X64"
-                    } | Select-Object -First 1
-                    
-                if (-not $vclibPackage) {
-                    Write-Host "Microsoft VCLibs installation verification failed" -ForegroundColor Red
-                    return
-                }
-            } catch {
-                Write-Host "Failed to install Microsoft VCLibs: $_" -ForegroundColor Red
+            if (-not $vclibPackage) {
+                Write-Host "Microsoft VCLibs installation verification failed" -ForegroundColor Red
                 return
             }
         }
