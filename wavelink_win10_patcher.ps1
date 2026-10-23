@@ -95,9 +95,9 @@ function Main {
 		Write-Host "Unpacking the installer..."
         
         $msixDir = Join-Path $tempDir "msix"
-        New-Item -ItemType Directory -Force -Path msixDir | Out-Null
+        New-Item -ItemType Directory -Force -Path $msixDir | Out-Null
         
-		& $makeappx unpack /p "$Path" /d msixDir /o | Out-Null
+		& $makeappx unpack /p "$Path" /d $msixDir /o | Out-Null
 		
 		# Locate the AppxManifest.xml
 		$appmanifest = Join-Path $msixDir "AppxManifest.xml"
