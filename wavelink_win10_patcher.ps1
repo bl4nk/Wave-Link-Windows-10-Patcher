@@ -174,6 +174,9 @@ function Main {
                 Exit
             }
             
+            # Close down problem programs
+            CloseProblemPrograms
+            
             # Install VCLib
             try {
                 Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
@@ -182,6 +185,9 @@ function Main {
                 Exit
             }
         }
+            
+        # Close down problem programs
+        CloseProblemPrograms
         
 		# Install the patched msix file
 		Write-Host "Installing the patched files..."
@@ -258,6 +264,16 @@ function Find-WinSDKFolder {
 function DownloadSDK-Message {	
 	Write-Host "Download one from https://learn.microsoft.com/en-us/windows/apps/windows-sdk/downloads"
 	Write-Host "Just download the newest version, even if it's for Windows 11"
+}
+
+function CloseProblemPrograms {
+    $problemProgs = @("AppInstaller", "WinStore.App")
+    foreach ($process in $problemProgs) {
+        if (Get-Process -Name $process -ErrorAction SilentlyContinue) {
+                Write-Host "Closing $process..."
+                Stop-Process -Name $process -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 Main -Path $FilePath
