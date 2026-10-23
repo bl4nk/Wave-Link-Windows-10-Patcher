@@ -272,6 +272,7 @@ function CloseProblemPrograms {
         if (Get-Process -Name $process -ErrorAction SilentlyContinue) {
                 Write-Host "Closing $process..."
                 Stop-Process -Name $process -Force -ErrorAction SilentlyContinue
+                Wait-Process -Timeout 5 -ErrorAction SilentlyContinue
         }
     }
 }
