@@ -93,10 +93,14 @@ function Main {
 		
 		# Extract the installer files
 		Write-Host "Unpacking the installer..."
-		& $makeappx unpack /p "$Path" /d "$tempDir" /o | Out-Null
+        
+        $msixDir = Join-Path $tempDir "msix"
+        New-Item -ItemType Directory -Force -Path msixDir | Out-Null
+        
+		& $makeappx unpack /p "$Path" /d msixDir /o | Out-Null
 		
 		# Locate the AppxManifest.xml
-		$appmanifest = Join-Path $tempDir "AppxManifest.xml"
+		$appmanifest = Join-Path $msixDir "AppxManifest.xml"
 		if (-not (Test-Path $appmanifest)) {
 			Write-Host "`n[ERROR] AppxManifest.xml not found after unpack" -ForegroundColor Red
 			Exit
@@ -115,9 +119,9 @@ function Main {
 		[System.IO.File]::WriteAllText($appmanifest, $xml, [System.Text.Encoding]::UTF8)
 		
 		# Repack the installer
-		$patchedInstaller = "$PSScriptRoot\WaveLink_Installer_Patched.msix"
+		$patchedInstaller = Join-Path $tempDir "WaveLink_Installer_Patched.msix"
 		Write-Host "Repacking the installer as: $patchedInstaller" -ForegroundColor Yellow
-		& $makeappx pack /d "$tempDir" /p "$patchedInstaller" /o | Out-Null
+		& $makeappx pack /d $msixDir /p "$patchedInstaller" /o | Out-Null
 
 		# Create a dummy password string (required but doesn't matter what it is)
 		$passwordStr = "password"
@@ -127,7 +131,7 @@ function Main {
 		$cert = New-SelfSignedCertificate -Type Custom -Subject "CN=WaveLinkPatched" -KeyUsage DigitalSignature -FriendlyName "WaveLinkPatched" -CertStoreLocation "Cert:\CurrentUser\My"
 
 		# Export the cert
-		$certFile = "$PSScriptRoot\WaveLinkPatchCert.pfx"
+		$certFile = Join-Path $tempdir "WaveLinkPatchCert.pfx"
 		Write-Host "Creating self-signed certificate: $certFile" -ForegroundColor Yellow
 		Export-PfxCertificate -Cert $cert -FilePath $certFile -Password $passwordSec | Out-Null
 
@@ -158,8 +162,6 @@ function Main {
 		# Remove the temporary files
 		Write-Host "Removing the temporary files..."
 		Remove-Item -Path $tempDir -Recurse -Force
-		Remove-Item -Path $patchedInstaller -Force
-		Remove-Item -Path $certFile -Force
 		
 		Write-Host "`nInstallation complete!" -ForegroundColor Green
 	} catch {
