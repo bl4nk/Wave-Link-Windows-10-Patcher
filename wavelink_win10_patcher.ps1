@@ -191,7 +191,7 @@ function Main {
         
 		# Install the patched msix file
 		Write-Host "Installing the patched files..."
-		Add-AppxPackage -Path "$patchedInstaller" -ErrorAction Stop
+		Add-AppxPackage -Path "$patchedInstaller" -ForceApplicationShutdown -ErrorAction Stop
         
         Write-Host "Removing the generated/imported certs..."
         
