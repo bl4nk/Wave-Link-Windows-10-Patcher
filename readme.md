@@ -1,6 +1,6 @@
 # Wave Link v3 Windows 10 Patcher
 
-An automated PowerShell script to patch and install the Elgato Wave Link MSIX package on Windows 10 systems. The script unpacks the installer, patches out the Windows 11 requirement, handles certificate signing, and automatically cleans up temporary files after a successful installation.
+An automated PowerShell script to patch and install the Elgato Wave Link MSIX package on Windows 10 systems. The script unpacks the installer, patches out the Windows 11 requirement, checks for and installs required dependencies, handles certificate signing, and automatically cleans up temporary files after a successful installation.
 
 ## Prerequisites
 
@@ -49,10 +49,11 @@ Once executed, re-run the patcher script normally.
 
 ---
 
-## Credits & Motivation
+## Credits, Motivation, and Thanks
 
 This script was inspired by [DRDRDRRDDRDR](https://github.com/DRDRDRRDDRDR). He made a whole program to handle everything, but I created this because I was having problems with his implementation, and I was looking for a simple script-based solution rather than a full application to handle the patch/installation process.
 
+Thanks to BurdTird for pointing out problems with VCLib being required and helping test out how to get it fixed.
 
 ---
 
