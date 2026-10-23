@@ -211,6 +211,8 @@ function Main {
                 Write-Host "Microsoft VCLibs installation verification failed" -ForegroundColor Red
                 return
             }
+            
+            Write-Host "Microsoft VCLibs $($vclibPackage.Version) (X64) installed successfully" -ForegroundColor Green
         }
             
         # Close down problem programs
