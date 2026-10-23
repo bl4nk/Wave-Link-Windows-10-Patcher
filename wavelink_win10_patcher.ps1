@@ -175,9 +175,9 @@ function Show-Usage {
 	$ScriptName = $MyInvocation.MyCommand.Name
 	
 	Write-Host "Usage:"
-	Write-Host '  .\$ScriptName "<path_to_file>"' -ForegroundColor Yellow
+	Write-Host "  .\$ScriptName `"<path_to_file>`"" -ForegroundColor Yellow
 	Write-Host "Example:"
-	Write-Host '  .\$ScriptName "C:\Elgato.WaveLink_3.3.0.4529_x64.msix"' -ForegroundColor Cyan
+	Write-Host "  .\$ScriptName `"C:\Elgato.WaveLink_3.3.0.4529_x64.msix`"" -ForegroundColor Cyan
 }
 
 function Find-WinSDKFolder {
