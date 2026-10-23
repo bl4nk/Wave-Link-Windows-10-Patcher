@@ -98,6 +98,11 @@ function Main {
         New-Item -ItemType Directory -Force -Path $msixDir | Out-Null
         
 		& $makeappx unpack /p "$Path" /d $msixDir /o | Out-Null
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to unpack MSIX installer" -ForegroundColor Red
+            return
+        }
 		
 		# Locate the AppxManifest.xml
 		$appmanifest = Join-Path $msixDir "AppxManifest.xml"
@@ -122,6 +127,11 @@ function Main {
 		$patchedInstaller = Join-Path $tempDir "WaveLink_Installer_Patched.msix"
 		Write-Host "Repacking the installer as: $patchedInstaller" -ForegroundColor Yellow
 		& $makeappx pack /d $msixDir /p "$patchedInstaller" /o | Out-Null
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to repack MSIX installer" -ForegroundColor Red
+            return
+        }
 
 		# Create a dummy password string (required but doesn't matter what it is)
 		$passwordStr = "password"
@@ -138,6 +148,11 @@ function Main {
 		# Sign the installer with the new cert
 		Write-Host "Signing the patched installer with our new cert.."
 		& $signtool sign /fd SHA256 /a /f "$certFile" /p $passwordStr "$patchedInstaller" | Out-Null
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to sign the patched installer" -ForegroundColor Red
+            return
+        }
 
 		# Import the cert into the Local Machine store
 		Write-Host "Importing the cert into your Local Machine store..."
