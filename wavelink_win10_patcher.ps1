@@ -195,6 +195,18 @@ function Main {
             # Install VCLib
             try {
                 Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
+                
+                # Verify installation
+                $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" |
+                    Where-Object {
+                        $_.Version -ge [version]"14.0.33728.0" -and
+                        $_.Architecture.ToString() -eq "X64"
+                    } | Select-Object -First 1
+                    
+                if (-not $vclibPackage) {
+                    Write-Host "Microsoft VCLibs installation verification failed" -ForegroundColor Red
+                    return
+                }
             } catch {
                 Write-Host "Failed to install Microsoft VCLibs: $_" -ForegroundColor Red
                 return
