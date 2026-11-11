@@ -9,7 +9,7 @@
 .PARAMETER FilePath
     The path to the target Wave Link .msix installer file.
 .EXAMPLE
-    .\patcher_new.ps1 "C:\Users\bl4nk\Desktop\Elgato.WaveLink_3.3.0.4529_x64.msix"
+    .\wavelink_win10_patcher.ps1 "C:\Users\bl4nk\Desktop\Elgato.WaveLink_3.3.0.4529_x64.msix"
 .NOTES
     This script must be ran as an Administrator in order to work properly.
 #>
