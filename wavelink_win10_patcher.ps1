@@ -30,6 +30,7 @@ function Main {
     # Init variables for later
     $oldPackage = $null
     $backupSettingsDir = $null
+    $tempDir = $null
     $copiedFolders = @()
     
 
@@ -362,6 +363,28 @@ function Main {
         Write-Host "`nInstallation complete!" -ForegroundColor Green
     } catch {
         Write-Host "`n[FATAL ERROR] Script execution halted: `n$_" -ForegroundColor Red
+        
+        # If temp files exist, prompt use for deletion
+        if ($tempDir -and (Test-Path -LiteralPath $tempDir)) {
+            Write-Host "`nTemporary files folder: $tempDir" -ForegroundColor Yellow
+            
+            $settingsBackupFolder = Join-Path $tempDir 'settings_backup'
+            if (Test-Path -LiteralPath $settingsBackupFolder) {
+                Write-Host "This folder contains your settings backup. Keep it if you need to recover them later."
+            }
+            
+            $answer = Read-Host "Delete the temporary folder and all files inside it?`nType YES to delete or press enter to keep them"
+            if ($answer.Trim() -ieq 'YES') {
+                try {
+                    Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction stop
+                    Write-Host "Temporary files deleted"
+                } catch {
+                    Write-Host "Could not delete the temporary files: $_" -ForegroundColor Yellow
+                }
+            } else {
+                Write-Host "Temporary files were not deleted"
+            }
+        }
     } finally {
         # Restore the user's old error preference
         $ErrorActionPreference = $OldErrorAction
