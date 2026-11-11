@@ -242,7 +242,7 @@ function Main {
         # If more than one Wave Link Package is installed
         $installed = @(Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction Stop)
         if ($installed.Count -gt 1) {
-            throw "More than one Wave Link package is installed. You need to remove the old versions."
+            throw "More than one Wave Link package is installed. You need to remove the old versions. This patcher only handles single installs."
         }
 
         # If only one Wave Link install is found
