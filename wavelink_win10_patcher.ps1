@@ -26,6 +26,12 @@ function Main {
     # Save user's error preference and set the script to stop on error (preference restored at end/fail)
     $OldErrorAction = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
+    
+    # Init variables for later
+    $oldPackage = $null
+    $backupSettingsDir = $null
+    $copiedFolders = @()
+    
 
     try {
         # Verify a param is given
@@ -120,12 +126,38 @@ function Main {
         [xml]$manifest = $xml
         $identity = $manifest.DocumentElement.SelectSingleNode("*[local-name()='Identity']")
         
+        if ($identity -eq $null) {
+            throw "The installer manifest does not have an Identity element"
+        }
+        
         if ($identity.GetAttribute("Name") -ne 'Elgato.WaveLink') {
-            throw "The MSIX installer you provided is not for Wave Link: $($identity.GetAttribute('name'))"
+            throw "The MSIX installer you provided is not for Wave Link"
         }
         
         # Get the version number we are trying to install
         $newVersion = [version]$identity.GetAttribute('Version')
+        
+        Write-Host "Detected installer version: $newVersion" -ForegroundColor Yellow
+        
+        Write-Host "Checking for previously installed Wave Link installations..."
+
+        # If more than one Wave Link Package is installed
+        $installed = @(Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction Stop)
+        if ($installed.Count -gt 1) {
+            throw "More than one Wave Link package is installed. You need to remove the old versions. This patcher only handles single installs."
+        }
+
+        # If only one Wave Link install is found
+        if ($installed.Count -eq 1) {
+            $oldPackage = $installed[0]
+
+            Write-Host "Detected Wave Link Version: $($oldPackage.Version) ($($oldPackage.PackageFamilyName))" -ForegroundColor Yellow
+            
+            # Version checking
+            if ([version]$oldPackage.Version -ge $newVersion) {
+                throw "The version you have installed is the same or newer than the one you are trying to install"
+            }
+        }
         
         Write-Host "Patching the AppxManifest.xml..."
         
@@ -237,26 +269,7 @@ function Main {
             Write-Host "Microsoft VCLibs $($vclibPackage.Version) (X64) installed successfully" -ForegroundColor Green
         }
         
-        Write-Host "Checking for previously installed Wave Link installations..."
-
-        # If more than one Wave Link Package is installed
-        $installed = @(Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction Stop)
-        if ($installed.Count -gt 1) {
-            throw "More than one Wave Link package is installed. You need to remove the old versions. This patcher only handles single installs."
-        }
-
-        # If only one Wave Link install is found
-        if ($installed.Count -eq 1) {
-            $oldPackage = $installed[0]
-
-            Write-Host "Detected Wave Link Version: $($oldPackage.Version) ($($oldPackage.PackageFamilyName))" -ForegroundColor Yellow
-            Write-Host "New Wave Link Version: $newVersion" -ForegroundColor Yellow
-            
-            # Version checking
-            if ([version]$oldPackage.Version -ge $newVersion) {
-                throw "The version you have installed is the same or newer than the one you are trying to install"
-            }
-            
+        if ($oldPackage) {
             Write-Host "Closing any active Wave Link processes..."
             
             # Get list of running Wave Link processes
