@@ -104,15 +104,13 @@ function Main {
         & $makeappx unpack /p "$Path" /d $msixDir /o | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Failed to unpack MSIX installer" -ForegroundColor Red
-            return
+            throw "Failed to unpack MSIX installer"
         }
         
         # Locate the AppxManifest.xml
         $appmanifest = Join-Path $msixDir "AppxManifest.xml"
         if (-not (Test-Path $appmanifest)) {
-            Write-Host "`n[ERROR] AppxManifest.xml not found after unpack" -ForegroundColor Red
-            return
+            throw "AppxManifest.xml not found after unpack"
         }
         
         # Parse the xml
@@ -136,8 +134,7 @@ function Main {
         
         # Verify it was patched
         if ($xml -notmatch 'MinVersion="10\.0\.19041\.0"') {
-            Write-Host "Failed to patch the minimum Windows version" -ForegroundColor Red
-            return
+            throw "Failed to patch the minimum Windows version"
         }
 
         # Replace the publisher
@@ -145,8 +142,7 @@ function Main {
         
         # Verify it was patched
         if ($xml -notmatch '<Identity\b[^>]*\bPublisher="CN=WaveLinkPatched"') {
-            Write-Host "Failed to patch the publisher" -ForegroundColor Red
-            return
+            throw "Failed to patch the publisher"
         }
         
         # Save the modified AppxManifest.xml
@@ -158,8 +154,7 @@ function Main {
         & $makeappx pack /d $msixDir /p "$patchedInstaller" /o | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Failed to repack MSIX installer" -ForegroundColor Red
-            return
+            throw "Failed to repack MSIX installer"
         }
 
         # Create a dummy password string (required but doesn't matter what it is)
@@ -184,8 +179,7 @@ function Main {
         & $signtool sign /fd SHA256 /f "$certPfx" /p $passwordStr "$patchedInstaller" | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Failed to sign the patched installer" -ForegroundColor Red
-            return
+            throw "Failed to sign the patched installer"
         }
 
         # Import the cert into the trusted store
@@ -223,8 +217,7 @@ function Main {
             # Get VCLibs package path
             $vcLibsPath = Join-Path $vcLibFolder "x64\Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx"
             if (-not (Test-Path $vcLibsPath)) {
-                Write-Host "Required VCLibs package not found in download" -ForegroundColor Red
-                return
+                throw "Required VCLibs package not found in download"
             }
             
             # Install VCLib
@@ -238,8 +231,7 @@ function Main {
                 } | Select-Object -First 1
                 
             if (-not $vclibPackage) {
-                Write-Host "Microsoft VCLibs installation verification failed" -ForegroundColor Red
-                return
+                throw "Microsoft VCLibs installation verification failed"
             }
             
             Write-Host "Microsoft VCLibs $($vclibPackage.Version) (X64) installed successfully" -ForegroundColor Green
@@ -250,8 +242,7 @@ function Main {
         # If more than one Wave Link Package is installed
         $installed = @(Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction Stop)
         if ($installed.Count -gt 1) {
-            Write-Host "[ERROR] More than one Wave Link package is installed. You need to remove the old versions." -ForegroundColor Red
-            return
+            throw "More than one Wave Link package is installed. You need to remove the old versions."
         }
 
         # If only one Wave Link install is found
@@ -263,8 +254,7 @@ function Main {
             
             # Version checking
             if ([version]$oldPackage.Version -ge $newVersion) {
-                Write-Host "[ERROR] The version you have installed is the same or newer than the one you are trying to install" -ForegroundColor Red
-                return
+                throw "The version you have installed is the same or newer than the one you are trying to install"
             }
             
             Write-Host "Closing any active Wave Link processes..."
@@ -442,7 +432,7 @@ function Copy-Folder {
     
     # Check for errors
     if ($LASTEXITCODE -ge 8) {
-        throw "[ERROR] Backup copy failed ($LASTEXITCODE): '$Source' -> '$Destination'"
+        throw "Backup copy failed ($LASTEXITCODE): '$Source' -> '$Destination'"
     }   
 }
 
