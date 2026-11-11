@@ -115,10 +115,23 @@ function Main {
             return
         }
         
+        # Parse the xml
+        $xml = [System.IO.File]::ReadAllText($appmanifest, [System.Text.Encoding]::UTF8)
+        
+        # Check that the installer is for Wave Link
+        [xml]$manifest = $xml
+        $identity = $manifest.DocumentElement.SelectSingleNode("*[local-name()='Identity']")
+        
+        if ($identity.GetAttribute("Name") -ne 'Elgato.WaveLink') {
+            throw "The MSIX installer you provided is not for Wave Link: $($identity.GetAttribute('name'))"
+        }
+        
+        # Get the version number we are trying to install
+        $newVersion = [version]$identity.GetAttribute('Version')
+        
         Write-Host "Patching the AppxManifest.xml..."
         
         # Replace the minimum required version
-        $xml = [System.IO.File]::ReadAllText($appmanifest, [System.Text.Encoding]::UTF8)
         $xml = $xml.Replace('MinVersion="10.0.22000.0"', 'MinVersion="10.0.19041.0"')
         
         # Verify it was patched
@@ -185,6 +198,10 @@ function Main {
                 $_.Version -ge [version]"14.0.33728.0" -and
                 $_.Architecture.ToString() -eq "X64"
             } | Select-Object -First 1
+            
+        # Close down problem programs
+        Write-Host "Checking for problem programs to close..."
+        CloseProblemPrograms
         
         if ($vclibPackage) {
             Write-Host "Detected Microsoft VCLibs $($vclibPackage.Version) ($($vclibPackage.Architecture))..." -ForegroundColor Yellow
@@ -210,9 +227,6 @@ function Main {
                 return
             }
             
-            # Close down problem programs
-            CloseProblemPrograms
-            
             # Install VCLib
             Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
             
@@ -230,13 +244,99 @@ function Main {
             
             Write-Host "Microsoft VCLibs $($vclibPackage.Version) (X64) installed successfully" -ForegroundColor Green
         }
+        
+        Write-Host "Checking for previously installed Wave Link installations..."
+
+        # If more than one Wave Link Package is installed
+        $installed = @(Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction Stop)
+        if ($installed.Count -gt 1) {
+            Write-Host "[ERROR] More than one Wave Link package is installed. You need to remove the old versions." -ForegroundColor Red
+            return
+        }
+
+        # If only one Wave Link install is found
+        if ($installed.Count -eq 1) {
+            $oldPackage = $installed[0]
+
+            Write-Host "Detected Wave Link Version: $($oldPackage.Version) ($($oldPackage.PackageFamilyName))" -ForegroundColor Yellow
+            Write-Host "New Wave Link Version: $newVersion" -ForegroundColor Yellow
             
-        # Close down problem programs
-        CloseProblemPrograms
+            # Version checking
+            if ([version]$oldPackage.Version -ge $newVersion) {
+                Write-Host "[ERROR] The version you have installed is the same or newer than the one you are trying to install" -ForegroundColor Red
+                return
+            }
+            
+            Write-Host "Closing any active Wave Link processes..."
+            
+            # Get list of running Wave Link processes
+            $curSession = (Get-Process -Id $PID).SessionId
+            $packagePath = ($oldPackage.InstallLocation.TrimEnd('\') + '\')
+            
+            $processes = @(Get-Process -ErrorAction Stop | Where-Object {
+                $_.SessionId -eq $curSession -and
+                $_.Path -and
+                $_.Path.StartsWith($packagePath, [StringComparison]::OrdinalIgnoreCase)
+            })
+            
+            # Close all running Wave Link processes
+            foreach ($process in $processes) {
+                Stop-Process -Id $process.Id -Force -ErrorAction Stop
+                Wait-Process -Id $process.Id -Timeout 10 -ErrorAction SilentlyContinue
+            }
+            
+            # Get old settings folder
+            $oldFolder = Join-Path $env:LOCALAPPDATA ('Packages\' + $oldPackage.PackageFamilyName)
+            
+            if (Test-Path $oldFolder) {
+                # Create settings backup folder
+                $backupSettingsDir = Join-Path $tempDir "settings_backup"
+                New-Item -ItemType Directory -Path $backupSettingsDir -Force | Out-Null
+                
+                Write-Host "Backing up old settings: '$oldFolder' -> '$backupSettingsDir'" -ForegroundColor Yellow
+                
+                # Back up old settings folders
+                $copiedFolders = @()
+                foreach ($folder in @('LocalCache', 'LocalState', 'RoamingState')) {
+                    $source = Join-Path $oldFolder $folder
+                    if (Test-Path -LiteralPath $source) {
+                        Copy-Folder -Source $source -Destination (Join-Path $backupSettingsDir $folder)
+                        $copiedFolders += $folder
+                    }
+                }
+            }
+            
+            Write-Host "Removing old Wave Link installation..."
+            
+            # Remove old installation
+            Remove-AppxPackage -Package $oldPackage.PackageFullName -ErrorAction Stop
+            
+            # Check to make sure it was properly removed
+            if (Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction Stop) {
+                throw "The old Wave Link package was not successfully removed."
+            }
+        }
         
         # Install the patched msix file
         Write-Host "Installing the patched files..."
         Add-AppxPackage -Path "$patchedInstaller" -ForceApplicationShutdown -ErrorAction Stop
+        
+        # Check for successful installation
+        $newPackage = Get-AppxPackage -Name 'Elgato.WaveLink' -ErrorAction stop
+        if (-not $newPackage -or [version]$newPackage.Version -ne $newVersion) {
+            throw "New version installation failed."
+        }
+        
+        # Check for backed up settings folder to Restore
+        if ($backupSettingsDir) {
+            Write-Host "Restoring backed up settings files..."
+            
+            $newSettingsDir = Join-Path $env:LOCALAPPDATA ('Packages\' + $newPackage.PackageFamilyName)
+            
+            foreach ($folder in $copiedFolders) {
+                Copy-Folder -Source (Join-Path $backupSettingsDir $folder) -Destination (Join-Path $newSettingsDir $folder)
+            }
+        }
         
         Write-Host "Removing the imported certs..."
         
@@ -329,6 +429,21 @@ function CloseProblemPrograms {
                 }
         }
     }
+}
+
+function Copy-Folder {
+    param([string]$Source, [string]$Destination)
+    
+    # Create the new folder
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    
+    # Copy files/folders using robocopy (returns 0-7 for success and 8+ for failure)
+    & robocopy.exe $Source $Destination /E /COPY:DAT /DCOPY:DAT /R:1 /W:1 /XJ /NP /NFL /NDL /NJH /NJS | Out-Null
+    
+    # Check for errors
+    if ($LASTEXITCODE -ge 8) {
+        throw "[ERROR] Backup copy failed ($LASTEXITCODE): '$Source' -> '$Destination'"
+    }   
 }
 
 Main -Path $FilePath
