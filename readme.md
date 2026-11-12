@@ -58,6 +58,7 @@ Thanks to BurdTird for pointing out problems with VCLib being required and helpi
 ---
 
 ## Screenshots
-<img width="1040" height="452" alt="image" src="https://github.com/user-attachments/assets/b8e38fb9-e710-455f-bc46-ab00fe7451bb" />
+
+<img width="859" height="500" alt="image" src="https://github.com/user-attachments/assets/24f022d8-3fce-4b56-930f-60a10d5e5db6" />
 
 <img width="1291" height="831" alt="image" src="https://github.com/user-attachments/assets/74926d82-8adf-4535-b6f1-9df11e71df4f" />
