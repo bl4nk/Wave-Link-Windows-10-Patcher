@@ -27,6 +27,11 @@ function Main {
     $OldErrorAction = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
     
+    # Save the user's progress display preference (preference restored at end/fail)
+    $OldProgressPreference = $ProgressPreference
+    $ProgressPreference = 'SilentlyContinue'
+    
+    
     # Init variables for later
     $oldPackage = $null
     $backupSettingsDir = $null
@@ -419,8 +424,9 @@ function Main {
             }
         }
     } finally {
-        # Restore the user's old error preference
+        # Restore the user's old error and progress display preferences
         $ErrorActionPreference = $OldErrorAction
+        $ProgressPreference = $OldProgressPreference
     }
 }
 
