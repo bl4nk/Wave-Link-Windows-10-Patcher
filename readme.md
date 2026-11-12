@@ -1,20 +1,12 @@
 # Wave Link v3 Windows 10 Patcher
 
-An automated PowerShell script to patch and install the Elgato Wave Link MSIX package on Windows 10 systems. The script unpacks the installer, patches out the Windows 11 requirement, checks for and installs required dependencies, handles certificate signing, and automatically cleans up temporary files after a successful installation.
+An automated PowerShell script to patch and install the Elgato Wave Link MSIX package on Windows 10 systems. The script unpacks the installer, patches out the Windows 11 requirement, checks for and installs required dependencies, and automatically cleans up temporary files after a successful installation. It can also handle updating between versions and will restore your settings upon doing so.
 
 ## Prerequisites
 
 Before running the patcher, ensure you have the following:
 
 1. **Wave Link Installer**: Download the latest official package from the [Elgato Downloads Page](https://www.elgato.com/us/en/s/downloads).
-2. **Windows SDK**: The script requires tools contained inside the Windows SDK. 
-
-### Verifying Windows SDK Installation
-Check if you already have the SDK by looking for version-labeled folders in either of these directories:
-* `C:\Program Files\Windows Kits\10\bin`
-* `C:\Program Files (x86)\Windows Kits\10\bin`
-
-> **Missing the SDK?** You can grab the latest version from the [Official Microsoft Windows SDK Downloads](https://learn.microsoft.com/en-us/windows/apps/windows-sdk/downloads). Download and install the newest release. It will function properly even if labeled exclusively for Windows 11.
 
 ---
 
@@ -29,8 +21,6 @@ Check if you already have the SDK by looking for version-labeled folders in eith
 ```
 
 The script will automatically patch the installer, install the program, and delete the temporary files upon completion.
-
-> **NOTE:** If you wish to retain the patched installer or temporary files afterwards, delete/comment out the *Remove-Item* lines in the script.
 
 ---
 
