@@ -7,6 +7,7 @@ An automated PowerShell script to patch and install the Elgato Wave Link MSIX pa
 Before running the patcher, ensure you have the following:
 
 1. **Wave Link Installer**: Download the latest official package from the [Elgato Downloads Page](https://www.elgato.com/us/en/s/downloads).
+2. Previously the Windows SDK, Microsoft VCLibs, and Windows App Runtime were needed as well, but the script now handles installing them automatically.
 
 ---
 
