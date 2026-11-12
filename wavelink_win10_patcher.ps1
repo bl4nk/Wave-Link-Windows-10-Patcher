@@ -216,7 +216,12 @@ function Main {
             # Extract VCLib files into a new folder
             $vcLibFolder = Join-Path $tempDir "vcLib"
             New-Item -ItemType Directory -Path $vcLibFolder -Force | Out-Null
-            Expand-Archive -Path $vcLibZip -DestinationPath $vcLibFolder -Force
+            
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            [System.IO.Compression.ZipFile]::ExtractToDirectory(
+                $vcLibZip,
+                $vcLibFolder
+            )
             
             # Get VCLibs package path
             $vcLibsPath = Join-Path $vcLibFolder "x64\Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx"
@@ -269,8 +274,10 @@ function Main {
             # Run the installer
             $success = Start-Process `
                 -FilePath $runtimeInstaller `
+                -WindowStyle Hidden `
                 -Wait `
-                -PassThru
+                -PassThru `
+                -ErrorAction Stop
                 
             # Check for successful installation
             if ($success.ExitCode -ne 0) {
