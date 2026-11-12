@@ -77,38 +77,60 @@ function Main {
             return
         }
         
-        # Get the newest available Windows SDK folder
-        Write-Host "Detecting newest Windows SDK folder..."
-        $winsdk = Find-WinSDKFolder
-        if (-not $winsdk) {
-            Write-Host "`n[ERROR] Windows SDK not found!" -ForegroundColor Red
-            DownloadSDK-Message
-            return
-        }
-
-        Write-Host "Found Windows SDK folder: $winsdk" -ForegroundColor Yellow
-
-        # Check for makeappx.exe
-        $makeappx = Join-Path $winsdk "makeappx.exe"
-        if (-not (Test-Path $makeappx)) {
-            Write-Host "`n[ERROR] makeappx.exe not found, reinstall your Windows SDK" -ForegroundColor Red
-            DownloadSDK-Message
-            return
-        }
-        
-        # Check for signtool.exe
-        $signtool = Join-Path $winsdk "signtool.exe"
-        if (-not (Test-Path $signtool)) {
-            Write-Host "`n[ERROR] signtool.exe not found, reinstall your Windows SDK" -ForegroundColor Red
-            DownloadSDK-Message
-            return
-        }
-        
         # Create a temporary folder
         $tempDir = Join-Path $env:TEMP ("wavelink_patcher_" + [guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
         
         Write-Host "Using temporary folder: $tempDir" -ForegroundColor Yellow
+        
+        # Detect the Windows SDK
+        Write-Host "Detecting newest Windows SDK folder..."
+        $winsdk = Find-WinSDKFolder
+        
+        # Windows SDK not found, attempt installation
+        if ($winsdk) {
+            Write-Host "Found Windows SDK folder: $winsdk" -ForegroundColor Yellow
+        } else {
+            # URL and paths used
+            $sdkUrl = 'https://go.microsoft.com/fwlink/?linkid=2382519'
+            $sdkInstaller = Join-Path $tempDir 'winsdksetup.exe'
+            $sdkLog = Join-Path $tempDir 'winsdk-install.log'
+            
+            Write-Host "Windows SDK is required and not found" -ForegroundColor Red
+            Write-Host "Downloading and installing it now. This may take a few minutes..." -ForegroundColor Yellow
+            
+            # Download the installer
+            Invoke-WebRequest `
+                -Uri $sdkUrl `
+                -Outfile $sdkInstaller `
+                -UseBasicParsing `
+                -ErrorAction stop
+            
+            # Run the installer
+            $success = Start-Process `
+                -FilePath $sdkInstaller `
+                -ArgumentList "/quiet /norestart /log `"$sdkLog`"" `
+                -Wait `
+                -PassThru `
+                -ErrorAction stop
+                
+            # Install failed
+            if ($success.ExitCode -ne 0) {
+                throw "Windows SDK installation failed with exit code $($success.ExitCode). Check the log at: $sdkLog"
+            }
+            
+            # Double check the install was successful
+            $winsdk = Find-WinSDKFolder
+            if (-not $winsdk) {
+                throw "Windows SDK setup finished but MakeAppx and/or SignTool were not found. Check the log at: $sdkLog"
+            }
+            
+            Write-Host "Windows SDK was installed successfully" -ForegroundColor Green
+        }
+        
+        # Set up MakeAppx and SignTool
+        $makeappx = Join-Path $winsdk 'makeappx.exe'
+        $signtool = Join-Path $winsdk 'signtool.exe'
         
         # Extract the installer files
         Write-Host "Unpacking the installer..."
@@ -166,6 +188,109 @@ function Main {
             if ([version]$oldPackage.Version -ge $newVersion) {
                 throw "The version you have installed is the same or newer than the one you are trying to install"
             }
+        }
+            
+        # Close down problem programs
+        Write-Host "Checking for problem programs to close..."
+        CloseProblemPrograms
+        
+        # Check for Microsoft VCLibs installation
+        $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Version -ge [version]"14.0.33728.0" -and
+                $_.Architecture.ToString() -eq "X64"
+            } | Select-Object -First 1
+        
+        # Install Microsoft VCLibs if not found
+        if ($vclibPackage) {
+            Write-Host "Detected Microsoft VCLibs $($vclibPackage.Version) ($($vclibPackage.Architecture))" -ForegroundColor Yellow
+        } else {
+            Write-Host "Microsoft VCLibs 14.0.33728.0 (X64) or newer is required." -ForegroundColor Red
+            Write-Host "Downloading and installing Microsoft VCLibs now. This may take a few minutes..."
+            
+            # Set up URL and temp path
+            $vcLibZip = Join-Path $tempDir "VCLibs.zip"
+            $downloadUrl = "https://github.com/microsoft/winget-cli/releases/download/v1.9.25180/DesktopAppInstaller_Dependencies.zip"
+            
+            # Download VCLib installer
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $vcLibZip -UseBasicParsing -ErrorAction Stop
+            
+            # Extract VCLib files into a new folder
+            $vcLibFolder = Join-Path $tempDir "vcLib"
+            New-Item -ItemType Directory -Path $vcLibFolder -Force | Out-Null
+            Expand-Archive -Path $vcLibZip -DestinationPath $vcLibFolder -Force
+            
+            # Get VCLibs package path
+            $vcLibsPath = Join-Path $vcLibFolder "x64\Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx"
+            if (-not (Test-Path $vcLibsPath)) {
+                throw "Required VCLibs package not found in download"
+            }
+            
+            # Install VCLib
+            Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
+            
+            # Verify installation
+            $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Version -ge [version]"14.0.33728.0" -and
+                    $_.Architecture.ToString() -eq "X64"
+                } | Select-Object -First 1
+                
+            if (-not $vclibPackage) {
+                throw "Microsoft VCLibs installation verification failed"
+            }
+            
+            Write-Host "Microsoft VCLibs $($vclibPackage.Version) (X64) installed successfully" -ForegroundColor Green
+        }
+        
+        # Check for Windows App Runtime installation
+        $appRuntime = Get-AppxPackage -Name 'Microsoft.WindowsAppRuntime.2' -ErrorAction Stop |
+            Where-Object {
+                $_.Version -ge [version]'2.4.0.0' -and
+                $_.Architecture.ToString() -in @('X64', 'Neutral')
+            } | Select-Object -First 1
+            
+        # Install Windows App Runtime if not found
+        if ($appRuntime) {
+            Write-Host "Detected Windows App Runtime $($appRuntime.Version) ($($appRuntime.Architecture))" -ForegroundColor Yellow
+        } else {
+            Write-Host "Windows App Runtime 2.4.0.0 or newer is required." -ForegroundColor Red
+            Write-Host "Downloading and installing Windows App Runtime now. This may take a few minutes..."
+            
+            # URL and paths used
+            $runtimeUrl = 'https://aka.ms/windowsappsdk/2.4/2.4.0/windowsappruntimeinstall-x64.exe'
+            $runtimeInstaller = Join-Path $tempDir 'WindowsAppRuntimeInstall-x64.exe'
+            
+            # Download Windows App Runtime installer
+            Invoke-WebRequest `
+                -Uri $runtimeUrl `
+                -Outfile $runtimeInstaller `
+                -UseBasicParsing `
+                -ErrorAction Stop
+                
+            # Run the installer
+            $success = Start-Process `
+                -FilePath $runtimeInstaller `
+                -Wait `
+                -PassThru
+                
+            # Check for successful installation
+            if ($success.ExitCode -ne 0) {
+                throw "Windows App Runtime installation failed with Exit Code $($success.ExitCode)"
+            }
+            
+            # Verify the installation
+            $runtimePackage = Get-AppxPackage -Name "Microsoft.WindowsAppRuntime.2" -ErrorAction Stop |
+                Where-Object {
+                    $_.Version -ge [version]'2.4.0.0' -and
+                    $_.Architecture.ToString() -in @('X64', 'Neutral')
+                } | Sort-Object { [version]$_.Version } -Descending | Select-Object -First 1
+                
+            if (-not $runtimePackage) {
+                throw "Windows App Runtime installation verification failed"
+            }
+            
+            Write-Host "Windows App Runtime $($runtimePackage.Version) ($($runtimePackage.Architecture)) installed successfully" -ForegroundColor Green
         }
         
         Write-Host "Patching the AppxManifest.xml..."
@@ -226,57 +351,6 @@ function Main {
         # Import the cert into the trusted store
         Write-Host "Importing the cert into TrustedPeople..."
         Import-Certificate -FilePath "$certCer" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
-        
-        # Check for dependencies
-        $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
-            Where-Object {
-                $_.Version -ge [version]"14.0.33728.0" -and
-                $_.Architecture.ToString() -eq "X64"
-            } | Select-Object -First 1
-            
-        # Close down problem programs
-        Write-Host "Checking for problem programs to close..."
-        CloseProblemPrograms
-        
-        if ($vclibPackage) {
-            Write-Host "Detected Microsoft VCLibs $($vclibPackage.Version) ($($vclibPackage.Architecture))..." -ForegroundColor Yellow
-        } else {
-            Write-Host "Microsoft VCLibs 14.0.33728.0 (X64) or newer is required." -ForegroundColor Red
-            Write-Host "Downloading and installing Microsoft VCLibs..."
-            
-            # Download VCLib files
-            $vcLibZip = Join-Path $tempDir "VCLibs.zip"
-            $downloadUrl = "https://github.com/microsoft/winget-cli/releases/download/v1.9.25180/DesktopAppInstaller_Dependencies.zip"
-            
-            Invoke-WebRequest -Uri $downloadUrl -OutFile $vcLibZip -ErrorAction Stop
-            
-            # Extract VCLib files into a new folder
-            $vcLibFolder = Join-Path $tempDir "vcLib"
-            New-Item -ItemType Directory -Path $vcLibFolder -Force | Out-Null
-            Expand-Archive -Path $vcLibZip -DestinationPath $vcLibFolder -Force
-            
-            # Get VCLibs package path
-            $vcLibsPath = Join-Path $vcLibFolder "x64\Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64.appx"
-            if (-not (Test-Path $vcLibsPath)) {
-                throw "Required VCLibs package not found in download"
-            }
-            
-            # Install VCLib
-            Add-AppxPackage -Path $vcLibsPath -ForceApplicationShutdown -ErrorAction stop
-            
-            # Verify installation
-            $vclibPackage = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue |
-                Where-Object {
-                    $_.Version -ge [version]"14.0.33728.0" -and
-                    $_.Architecture.ToString() -eq "X64"
-                } | Select-Object -First 1
-                
-            if (-not $vclibPackage) {
-                throw "Microsoft VCLibs installation verification failed"
-            }
-            
-            Write-Host "Microsoft VCLibs $($vclibPackage.Version) (X64) installed successfully" -ForegroundColor Green
-        }
         
         if ($oldPackage) {
             Write-Host "Closing any active Wave Link processes..."
@@ -456,7 +530,7 @@ function Find-WinSDKFolder {
     $roots = @("C:\Program Files (x86)\Windows Kits\10\bin", "C:\Program Files\Windows Kits\10\bin")
     $foundFiles = foreach ($r in $roots) {
         if (Test-Path $r) {
-            Get-ChildItem $r -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue | 
+            Get-ChildItem $r -Recurse -Filter 'makeappx.exe' -ErrorAction SilentlyContinue | 
                 Where-Object {
                     $_.DirectoryName -like "*\$arch" -and
                     (Test-Path (Join-Path $_.DirectoryName "signtool.exe"))
