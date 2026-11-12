@@ -466,6 +466,90 @@ function Main {
             Remove-Item -Path $trustedCert -Force
         }
         
+        # Check for Elgato Audio Driver
+        Write-Host "Checking for an installed Elgato Audio Driver..."
+        $audioDriver = Get-CimInstance Win32_PnPSignedDriver |
+            Where-Object { $_.DeviceName -eq 'Elgato Virtual Audio' } |
+            Sort-Object { [version]$_.DriverVersion } -Descending |
+            Select-Object -First 1
+            
+        # If the driver is not found, download and install it
+        if ($audioDriver) {
+            Write-Host "Detected Elgato Audio Driver: $($audioDriver.DriverVersion)"
+        } else {
+            Write-Host "Elgato Audio Driver not found. Downloading and installing now..."
+            
+            # Get the URL to the latest driver from Elgato
+            $driverUrl = (
+                'https://gc-updates.elgato.com/windows/ewlw-update/final/device-update-check.php' +
+                '?osName=Windows' +
+                '&osVersion=10.0.22000.0' +
+                '&osPlatform=x86_64' +
+                "&appVersion=$newVersion" +
+                '&appPlatform=x86_64' +
+                '&appLanguage=en-US'
+            )
+            
+            # Get the list of driver updates
+            $driverUpdates = Invoke-RestMethod -Uri $driverUrl -ErrorAction Stop
+            
+            # Choose the newest driver
+            $latestDriver = $driverUpdates.appDevices |
+                Where-Object { $_.name -eq 'Elgato Wave Link Driver' } |
+                ForEach-Object { $_.drivers } |
+                Sort-Object { [version]$_.version } -Descending |
+                Select-Object -First 1
+                
+            # Check if driver url was found
+            if (-not $latestDriver -or -not $latestDriver.downloadUrl) {
+                throw "Elgato did not return a Wave Link Audio Driver download"
+            }
+            
+            # Set up URL and paths
+            $driverVersion = [version]$latestDriver.version
+            $driverUrl = [string]$latestDriver.downloadUrl
+            
+            $driverInstaller = Join-Path $tempDir "WaveLinkDriver_$($driverVersion)_x64.msi"
+            $driverLog = Join-Path $tempDir "wavelink-driver-install.log"
+            
+            # Download the driver
+            Invoke-WebRequest `
+                -Uri $driverUrl `
+                -OutFile $driverInstaller `
+                -UseBasicParsing `
+                -ErrorAction stop
+                
+            # Install the driver
+            $driverInstall = Start-Process `
+                -FilePath "$env:SystemRoot\System32\msiexec.exe" `
+                -ArgumentList "/i `"$driverInstaller`" /qn /norestart /L*v `"$driverLog`"" `
+                -Wait `
+                -PassThru `
+                -ErrorAction Stop
+                
+            # Verify the installation was a success
+            if ($driverInstall.ExitCode -notin @(0, 3010)) {
+                throw "Elgato Wave Link Driver installation failed with Exit Code $($driverInstall.ExitCode). Check the log at: $driverLog"
+            }
+            
+            # Verify the driver was installed successfully
+            $uninstallPaths = @(
+                'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+                'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+            )
+
+            $installedDriver = Get-ItemProperty -Path $uninstallPaths -ErrorAction SilentlyContinue |
+                Where-Object { $_.DisplayName -eq 'Elgato Wave Link Driver' } |
+                Sort-Object { [version]$_.DisplayVersion } -Descending |
+                Select-Object -First 1
+
+            if (-not $installedDriver -or [version]$installedDriver.DisplayVersion -lt $driverVersion) {
+                throw "Elgato Wave Link Driver installation verification failed. Check the log at: $driverLog"
+            }
+            
+            Write-Host "Elgato Wave Link Driver $($installedDriver.DisplayVersion) successfully installed" -ForegroundColor Green
+        }
+        
         # Remove the temporary files
         Write-Host "Removing the temporary files..."
         Remove-Item -Path $tempDir -Recurse -Force
