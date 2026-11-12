@@ -55,6 +55,9 @@ function Main {
             Write-Host "Press any key to continue and open the administrator prompt..." -ForegroundColor Cyan
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             
+            # Resolve the path so it's properly passed to the elevated powershell
+            $Path = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
+            
             # Pop up the UAC prompt and make sure they accepted
             try {
                 $escScriptPath = $PSCommandPath.Replace("'", "''")
