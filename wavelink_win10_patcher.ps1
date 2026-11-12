@@ -2,16 +2,14 @@
 .SYNOPSIS
     Patches and installs the Elgato Wave Link v3 installer on Windows 10 systems.
 .DESCRIPTION
-    This script extracts the Wave Link installer, modifies the AppxManifest.xml, 
-    repacks the installer, generates a custom self-signed certificate, checks for
-    dependencies and installs them, installs the patched file, and deletes
-    temporary files.
+    This script extracts the Wave Link installer, patches out the Windows 11 requirement, 
+    repacks the installer, checks for required dependencies and drivers, installs everything
+    for you, and deletes the created temporary files. It can also handle updating between
+    versions and will restore settings upon doing so.
 .PARAMETER FilePath
     The path to the target Wave Link .msix installer file.
 .EXAMPLE
     .\wavelink_win10_patcher.ps1 "C:\Users\bl4nk\Desktop\Elgato.WaveLink_3.3.0.4529_x64.msix"
-.NOTES
-    This script must be ran as an Administrator in order to work properly.
 #>
 
 # Define script usage params
