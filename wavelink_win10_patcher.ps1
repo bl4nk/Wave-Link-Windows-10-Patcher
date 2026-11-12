@@ -316,7 +316,7 @@ function Main {
         
         # Repack the installer
         $patchedInstaller = Join-Path $tempDir "WaveLink_Installer_Patched.msix"
-        Write-Host "Repacking the installer as: $patchedInstaller" -ForegroundColor Yellow
+        Write-Host "Repacking the installer..."
         & $makeappx pack /d $msixDir /p "$patchedInstaller" /o | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
@@ -334,10 +334,10 @@ function Main {
         $certCer = Join-Path $tempDir "WaveLinkPatchedCert.cer"
 
         # Export the certs
-        Write-Host "Creating signing certificate: $certPfx" -ForegroundColor Yellow
+        Write-Host "Creating signing certificate..."
         Export-PfxCertificate -Cert $cert -FilePath $certPfx -Password $passwordSec | Out-Null
         
-        Write-Host "Creating public certificate: $certCer" -ForegroundColor Yellow
+        Write-Host "Creating public certificate..."
         Export-Certificate -Cert $cert -FilePath $certCer | Out-Null
 
         # Sign the installer with the new cert
