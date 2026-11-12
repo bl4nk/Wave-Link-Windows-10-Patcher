@@ -204,7 +204,7 @@ function Main {
             Write-Host "Detected Microsoft VCLibs $($vclibPackage.Version) ($($vclibPackage.Architecture))" -ForegroundColor Yellow
         } else {
             Write-Host "Microsoft VCLibs 14.0.33728.0 (X64) or newer is required." -ForegroundColor Red
-            Write-Host "Downloading and installing Microsoft VCLibs now. This may take a few minutes..."
+            Write-Host "Downloading and installing it now. This may take a few minutes..." -ForegroundColor Yellow
             
             # Set up URL and temp path
             $vcLibZip = Join-Path $tempDir "VCLibs.zip"
@@ -253,7 +253,7 @@ function Main {
             Write-Host "Detected Windows App Runtime $($appRuntime.Version) ($($appRuntime.Architecture))" -ForegroundColor Yellow
         } else {
             Write-Host "Windows App Runtime 2.4.0.0 or newer is required." -ForegroundColor Red
-            Write-Host "Downloading and installing Windows App Runtime now. This may take a few minutes..."
+            Write-Host "Downloading and installing it now. This may take a few minutes..." -ForegroundColor Yellow
             
             # URL and paths used
             $runtimeUrl = 'https://aka.ms/windowsappsdk/2.4/2.4.0/windowsappruntimeinstall-x64.exe'
@@ -475,7 +475,8 @@ function Main {
         if ($audioDriver) {
             Write-Host "Detected Elgato Audio Driver: $($audioDriver.DriverVersion)"
         } else {
-            Write-Host "Elgato Audio Driver not found. Downloading and installing now..."
+            Write-Host "Elgato Audio Driver not found." -ForegroundColor Red
+            Write-Host "Downloading and installing it now. This may take a few minutes..." -ForegroundColor Yellow
             
             # Get the URL to the latest driver from Elgato
             $driverUrl = (
