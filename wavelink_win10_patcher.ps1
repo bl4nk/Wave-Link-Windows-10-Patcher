@@ -449,9 +449,7 @@ function Main {
                 throw "Could not create the junction due to another folder or junction existing at: $linkPath"
             }
         } else {
-            New-Item -FileType Junction -Path $linkPath -Target $targetPath -ErrorAction Stop | Out-Null
-            
-            Write-Host "Successfully created junction: '$linkPath' -> '$targetPath'" -ForegroundColor Yellow
+            New-Item -ItemType Junction -Path $linkPath -Target $targetPath -ErrorAction Stop | Out-Null
         }
         
         Write-Host "Removing the imported certs..."
