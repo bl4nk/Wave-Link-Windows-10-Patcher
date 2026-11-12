@@ -554,7 +554,27 @@ function Main {
         Write-Host "Removing the temporary files..."
         Remove-Item -Path $tempDir -Recurse -Force
         
-        Write-Host "`nInstallation complete!" -ForegroundColor Green
+        Write-Host "`nInstallation complete! Launching Wave Link..." -ForegroundColor Green
+        
+        # Attempt launching Wave Link
+        try {
+            $launchManifest = Get-AppxPackageManifest -Package $newPackage.PackageFullName -ErrorAction stop
+            $application = $launchManifest.Package.Applications.Application |
+                Where-Object { $_.Executable -like '*Elgato.WaveLink.exe' } |
+                Select-Object -First 1
+                
+            if (-not $application) {
+                throw "Could not find the Wave Link application ID"
+            }
+            
+            $appId = "$($newPackage.PackageFamilyName)!$($application.Id)"
+            
+            Start-Process -FilePath 'explorer.exe' `
+                -ArgumentList "shell:AppsFolder\$appId" `
+                -ErrorAction Stop
+        } catch {
+            Write-Host "Wave Link was installed, but could not be launched automatically: $_" -ForegroundColor Yellow
+        }
     } catch {
         Write-Host "`n[FATAL ERROR] Script execution halted: `n$_" -ForegroundColor Red
         
