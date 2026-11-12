@@ -549,11 +549,6 @@ function Find-WinSDKFolder {
     return $null
 }
 
-function DownloadSDK-Message {  
-    Write-Host "Download one from https://learn.microsoft.com/en-us/windows/apps/windows-sdk/downloads"
-    Write-Host "Just download the newest version, even if it's for Windows 11"
-}
-
 function CloseProblemPrograms {
     $problemProgs = @("AppInstaller", "WinStore.App")
     foreach ($process in $problemProgs) {
