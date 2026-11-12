@@ -342,6 +342,36 @@ function Main {
             }
         }
         
+        Write-Host "Creating directory link to default Elgato Wave Link program data folder..."
+        
+        # Build paths for the directory junction
+        $packagesDir = Join-Path $env:LOCALAPPDATA 'Packages'
+        $linkPath = Join-Path $packagesDir 'Elgato.WaveLink_g54w8ztgkx496'
+        $targetPath = Join-Path $packagesDir $newPackage.PackageFamilyName
+        
+        # Check to make sure the patched install has a data folder
+        if (-not (Test-Path -LiteralPath $targetPath -PathType Container)) {
+            throw "Patched Wave Link data folder not found: $targetPath"
+        }
+        
+        # Does the junction already exist?
+        $exists = Get-Item -LiteralPath $linkPath -Force -ErrorAction SilentlyContinue
+        
+        # If it exists already check if it's legit or fail out.. If it doesn't, create the junction
+        if ($linkPath -eq $targetPath) {
+            Write-Host "Wave Link already using the default program data folder"
+        } elseif ($exists) {
+            if ($exists.LinkType -eq 'Junction' -and $exists.Target -contains $targetPath) {
+                Write-Host "The directory junction already exists"
+            } else {
+                throw "Could not create the junction due to another folder or junction existing at: $linkPath"
+            }
+        } else {
+            New-Item -FileType Junction -Path $linkPath -Target $targetPath -ErrorAction Stop | Out-Null
+            
+            Write-Host "Successfully created junction: '$linkPath' -> '$targetPath'" -ForegroundColor Yellow
+        }
+        
         Write-Host "Removing the imported certs..."
         
         # Remove the public certificate from trusted store
